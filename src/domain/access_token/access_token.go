@@ -1,13 +1,19 @@
 package access_token
 
 import (
+	"fmt"
+	"github.com/bookstore_oauth-api/src/utils/crypto_utils"
 	"strings"
 	"time"
 
 	"github.com/bookstore_oauth-api/src/utils/errors"
 )
 
-const expirationTime = 24
+const (
+	expirationTime             = 24
+	grantTypePassword          = "password"
+	grantTypeClientCredentials = "client_credentials"
+)
 
 type AccessToken struct {
 	AccessToken string `json: "access_token"`
@@ -16,8 +22,22 @@ type AccessToken struct {
 	Expires     int64  `json: "expires"`
 }
 
-func GetNewAccessToken() *AccessToken {
-	return &AccessToken{
+type AccessTokenRequest struct {
+	GrantType string `json: "grant_type" validate:"required"`
+	Scope     string `json: "scope"`
+
+	// used for password grant type
+	Username string `json: "username" validate:"required"`
+	Password string `json: "password" validate:"required"`
+
+	// used for client credentials grant type
+	ClientID     string `json: "client_id"`
+	ClientSecret string `json: "client_secret"`
+}
+
+func NewAccessToken(userId int64) AccessToken {
+	return AccessToken{
+		UserID:  userId,
 		Expires: time.Now().UTC().Add(expirationTime * time.Hour).Unix(),
 	}
 }
@@ -40,4 +60,15 @@ func (at *AccessToken) Validate() *errors.RestError {
 		return errors.NewBadRequest("invalid expiration time")
 	}
 	return nil
+}
+
+func (at *AccessTokenRequest) Validate() *errors.RestError {
+	if at.GrantType != grantTypePassword || at.GrantType != grantTypeClientCredentials {
+		return errors.NewBadRequest("invalid grant type")
+	}
+	return nil
+}
+
+func (at *AccessToken) Generate() {
+	at.AccessToken = crypto_utils.GetMd5(fmt.Sprintf("at-%d-%d-ran", at.UserID, at.Expires))
 }

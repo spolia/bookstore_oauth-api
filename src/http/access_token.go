@@ -1,10 +1,11 @@
 package http
 
 import (
-	"github.com/bookstore_oauth-api/src/utils/errors"
 	"net/http"
 
 	"github.com/bookstore_oauth-api/src/domain/access_token"
+	access_token2 "github.com/bookstore_oauth-api/src/services/access_token"
+	"github.com/bookstore_oauth-api/src/utils/errors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,10 +15,10 @@ type AccessTokenHandler interface {
 }
 
 type accessTokenHandler struct {
-	service access_token.Service
+	service access_token2.Service
 }
 
-func NewHandler(service access_token.Service) AccessTokenHandler {
+func NewHandler(service access_token2.Service) AccessTokenHandler {
 	return &accessTokenHandler{service: service}
 }
 
@@ -32,13 +33,13 @@ func (h *accessTokenHandler) GetById(c *gin.Context) {
 }
 
 func (h *accessTokenHandler) Create(c *gin.Context) {
-	var at access_token.AccessToken
+	var at access_token.AccessTokenRequest
 	if err := c.ShouldBindJSON(&at); err != nil {
 		c.JSON(http.StatusBadRequest, errors.NewBadRequest("invalid json body"))
 		return
 	}
 
-	if err := h.service.Create(at); err != nil {
+	if _, err := h.service.Create(at); err != nil {
 		c.JSON(err.Status, err)
 		return
 	}
